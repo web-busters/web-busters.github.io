@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Test task</title>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <style>
+        .form-control[type="checkbox"] {
+            width: 34px;
+        }
+        .error {
+            color: red;
+        }
+        #container {
+            margin-bottom: 50px;
+        }
+    </style>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.24.0/babel.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>Тестовое задание React.js</h1>
+    <div class="row">
+        <div class="col-md-6 visible-md visible-lg">
+            <p>Необходимо разработать одностраничное JavaScript-приложение. Использовать
+            любой JavaScript-фреймворк (в порядке приоритета: React, Marionette.js, jQuery и т.д.).
+            По возможности максимально использовать возможности данного фреймворка.
+            На странице должна размещаться форма, содержащая два текстовых поля, два
+            чекбокса и кнопку.</p>
+            <p>
+                Поля:
+                <ul>
+                    <li>email</li>
+                    <li>cell_phone - в формате +7-NNN-NNN-NNNN (N - любая цифра)</li>
+                </ul>
+            </p>
+            <p>Содержимое полей должно валидироваться на клиенте, при клике на кнопку отправки
+            формы (включая обязательный чекбокс). В случае некорректных значений, данные на
+            сервер отправляться не должны, а у соответствующих полей должны отображаться
+            сообщения об ошибках.</p>
+            <p>Один из чекбоксов обязателен для отправки формы, а второй - нет.</p>
+            <p>В случае открытия страницы формы с get-параметром, имя которого равно названию
+            поля-чекбокса, а значение - единице - не отображать данный чекбокс в форме, но
+            отправлять соответствующее поле при отправке формы на сервер.</p>
+        </div>
+        <div class="col-md-6">
+            <div id="container"></div>
+        </div>
+    </div>
+</div>
+<script type="text/babel">
+    class Form extends React.Component {
+        constructor(props) {
+            super(props);
+
+            const query = new URLSearchParams(location.search);
+            const getCheckbox1 = (query.get('checkbox_1') === '1') ? true : false;
+
+            this.state = {
+                email: '',
+                cell_phone: '',
+                checkbox_1: getCheckbox1,
+                checkbox_1_hide: getCheckbox1,
+                checkbox_2: '',
+                email_error: '',
+                cell_phone_error: '',
+                checkbox_1_error: '',
+            }
+        }
+
+        validate = () => {
+            const email = this.state.email;
+            const cell_phone = this.state.cell_phone;
+            const checkbox_1 = this.state.checkbox_1;
+
+            // validate Email
+            const emailValid = email.match(/^([\w.%+-]+)@([\w-]+\.)+([\w]{2,})$/i);
+            const emailError = emailValid ? '' : 'Invalid email';
+
+            // validate Cell phone
+            const phoneMask = /^\+7?-?([0-9]{3})?-?([0-9]{3})?-?([0-9]{4})$/;
+            const cellPhoneError = cell_phone.match(phoneMask) ? '' : 'Invalid cell phone';
+
+            // check checkbox
+            const checkboxError = checkbox_1 ? '' : 'Pick this checkbox';
+
+            this.setState({
+                email_error: emailError,
+                cell_phone_error: cellPhoneError,
+                checkbox_1_error: checkboxError,
+            });
+
+            if (emailError || cellPhoneError || checkboxError) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        handleSubmit = (e) => {
+            e.preventDefault();
+            if (this.validate()) {
+                this.sendData();
+                // this.props.submit();
+            }
+            return false;
+        }
+
+        handleChange = (e) => {
+            const { name, value } = e.target;
+            // variant of decision instead handleChangeCheckbox
+            // const value = target.type === 'checkbox' ? target.checked : target.value;
+            this.setState({
+              [name]: value,
+            });
+        }
+
+        handleChangeCheckbox = (e) => {
+            const name = e.target.name;
+            const value = !this.state[name];
+            this.setState({
+              [name]: value,
+            });
+        }
+
+        sendData = () => {
+            const self = this;
+
+            fetch('/ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: this.state.email,
+                    cell_phone: this.state.cell_phone,
+                    checkbox_1: this.state.checkbox_1,
+                    checkbox_2: this.state.checkbox_2,
+                })
+            }).then(function(response) {
+                // DBG
+                // console.log(response.headers.get('Content-Type')); // application/json; charset=utf-8
+                // console.log(response.status); // 200
+                return response.json();
+            })
+            .then(function(respondData) {
+                if (respondData.status === "OK") {
+                    location.href = respondData.url;
+                } else {
+                    for (let key in respondData.errors) {
+                        if (respondData.errors.hasOwnProperty(key)) {
+                            self.setState({ [`${key}_error`]: respondData.errors[key].join(', ') });
+                        }
+                    }
+                }
+            })
+            .catch(function(ex) {
+                console.log('Exception!', ex)
+            });
+        }
+
+        render() {
+            return (
+                <form onSubmit={this.handleSubmit}>
+                    <div className="form-group">
+                        <label htmlFor="email">Email*</label>
+                        <input className="form-control" name="email" id="email" type="text" value={this.state.email} onChange={this.handleChange} />
+                        <div className="error">{this.state.email_error}</div>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="cell_phone">Cell phone*</label>
+                        <input className="form-control" name="cell_phone" id="cell_phone" type="text" value={this.state.cell_phone} onChange={this.handleChange} placeholder="+7-XXX-XXX-XXXX" />
+                        <div className="error">{this.state.cell_phone_error}</div>
+                    </div>
+                    <div className={`form-group ${this.state.checkbox_1_hide ? 'hidden' : ''}`}>
+                        <label htmlFor="checkbox_1">Checkbox 1*</label>
+                        <input className="form-control" name="checkbox_1" id="checkbox_1" type="checkbox" defaultChecked={this.state.checkbox_1} onChange={this.handleChangeCheckbox} />
+                        <div className="error">{this.state.checkbox_1_error}</div>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="checkbox_2">Checkbox 2</label>
+                        <input className="form-control" name="checkbox_2" id="checkbox_2" type="checkbox" defaultChecked={this.state.checkbox_2} onChange={this.handleChangeCheckbox} />
+                    </div>
+                    <input type="submit" className="btn btn-primary" value="Submit" />
+                </form>
+            );
+        }
+    };
+
+    ReactDOM.render(
+        <Form />,
+        document.getElementById('container')
+    );
+</script>
+</body>
+</html>
