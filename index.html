@@ -3,197 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <title>Test task</title>
-    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <style>
-        .form-control[type="checkbox"] {
-            width: 34px;
+        .fraction::after {
+            content: '＋';
+            display: flex;
+            align-items: center;
+            padding: 0 5px 9px;
+            font-size: 40px;
+            color: #000;
         }
-        .error {
-            color: red;
+        .fraction:nth-last-child(2)::after {
+            content: '=';
         }
+        .fraction:last-child::after {
+            display: none;
+        }
+        .fraction input {
+            display: block;
+            margin: 7px;
+            width: 50px;
+        }
+        .btn-delete {
+            display: block;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .fraction__divider {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: #000;
+        }
+        .fraction-result {
+            align-items: center;
+        }
+        .btn-add {
+            margin-top: 20px;
+        }
+
         #container {
             margin-bottom: 50px;
         }
+        [v-cloak] { display:none; }
     </style>
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
-    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.24.0/babel.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 </head>
 <body>
 <div class="container">
-    <h1>Тестовое задание React.js</h1>
-    <div class="row">
-        <div class="col-md-6 visible-md visible-lg">
-            <p>Необходимо разработать одностраничное JavaScript-приложение. Использовать
-            любой JavaScript-фреймворк (в порядке приоритета: React, Marionette.js, jQuery и т.д.).
-            По возможности максимально использовать возможности данного фреймворка.
-            На странице должна размещаться форма, содержащая два текстовых поля, два
-            чекбокса и кнопку.</p>
-            <p>
-                Поля:
-                <ul>
-                    <li>email</li>
-                    <li>cell_phone - в формате +7-NNN-NNN-NNNN (N - любая цифра)</li>
-                </ul>
-            </p>
-            <p>Содержимое полей должно валидироваться на клиенте, при клике на кнопку отправки
-            формы (включая обязательный чекбокс). В случае некорректных значений, данные на
-            сервер отправляться не должны, а у соответствующих полей должны отображаться
-            сообщения об ошибках.</p>
-            <p>Один из чекбоксов обязателен для отправки формы, а второй - нет.</p>
-            <p>В случае открытия страницы формы с get-параметром, имя которого равно названию
-            поля-чекбокса, а значение - единице - не отображать данный чекбокс в форме, но
-            отправлять соответствующее поле при отправке формы на сервер.</p>
-        </div>
+    <div class="row justify-content-center align-items-center">
         <div class="col-md-6">
-            <div id="container"></div>
+            <h3>Тестовое задание для фронтенд разработчика (Vue.js)</h3>
+            <p>Создать форму для вычисления сумм дробей:</p>
+            <ul>
+                <li>нужно сверстать форму, в которой будут поля для заполнения дробями.</li>
+                <li>предусмотреть валидацию ввода - чтобы в поля можно было ввести только целые числа от 1 до 99. <span class="text-info">(Валидация получилась не очень серьезная)</span></li>
+                <li>результат выводить с помощью <b>computed</b> свойства</li>
+                <li>под формой нужна кнопка, которая добавляет одну дробь в конец выражения (максимальное количество дробей в выражении - 5).
+                    Желательно сделать возможность удалять любую из дробей, если их количество больше 2-ух.</li>
+            </ul>
+            <p>Примерный вид формы:</p>
+            <img src="img.png" alt="">
+
+            <!-- container -->
+            <div id="container">
+                <div class="d-flex flex-row">
+                    <fractions
+                        v-for="(fraction, index) in fractions_list"
+                        v-bind:key="index"
+                        v-bind:index="index"
+                        v-bind:fraction="fraction"
+                        v-bind:quantity="fractions_list.length"
+                        v-on:delete-fraction="deleteFraction"
+                    ></fractions>
+
+                    <div class="d-flex fraction-result">
+                        <div v-cloak>
+                            {{ division_result }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-row">
+                    <div>
+                        <input type="button" value="add new element" class="btn-add" @click="add" />
+                    </div>
+                </div>
+            </div>
+            <!-- / container -->
+
         </div>
     </div>
 </div>
-<script type="text/babel">
-    class Form extends React.Component {
-        constructor(props) {
-            super(props);
-
-            const query = new URLSearchParams(location.search);
-            const getCheckbox1 = (query.get('checkbox_1') === '1') ? true : false;
-
-            this.state = {
-                email: '',
-                cell_phone: '',
-                checkbox_1: getCheckbox1,
-                checkbox_1_hide: getCheckbox1,
-                checkbox_2: '',
-                email_error: '',
-                cell_phone_error: '',
-                checkbox_1_error: '',
-            }
-        }
-
-        validate = () => {
-            const email = this.state.email;
-            const cell_phone = this.state.cell_phone;
-            const checkbox_1 = this.state.checkbox_1;
-
-            // validate Email
-            const emailValid = email.match(/^([\w.%+-]+)@([\w-]+\.)+([\w]{2,})$/i);
-            const emailError = emailValid ? '' : 'Invalid email';
-
-            // validate Cell phone
-            const phoneMask = /^\+7?-?([0-9]{3})?-?([0-9]{3})?-?([0-9]{4})$/;
-            const cellPhoneError = cell_phone.match(phoneMask) ? '' : 'Invalid cell phone';
-
-            // check checkbox
-            const checkboxError = checkbox_1 ? '' : 'Pick this checkbox';
-
-            this.setState({
-                email_error: emailError,
-                cell_phone_error: cellPhoneError,
-                checkbox_1_error: checkboxError,
-            });
-
-            if (emailError || cellPhoneError || checkboxError) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        handleSubmit = (e) => {
-            e.preventDefault();
-            if (this.validate()) {
-                this.sendData();
-                // this.props.submit();
-            }
-            return false;
-        }
-
-        handleChange = (e) => {
-            const { name, value } = e.target;
-            // variant of decision instead handleChangeCheckbox
-            // const value = target.type === 'checkbox' ? target.checked : target.value;
-            this.setState({
-              [name]: value,
-            });
-        }
-
-        handleChangeCheckbox = (e) => {
-            const name = e.target.name;
-            const value = !this.state[name];
-            this.setState({
-              [name]: value,
-            });
-        }
-
-        sendData = () => {
-            const self = this;
-
-            fetch('https://uptime.offertsy.com/ajax.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email: this.state.email,
-                    cell_phone: this.state.cell_phone,
-                    checkbox_1: this.state.checkbox_1,
-                    checkbox_2: this.state.checkbox_2,
-                })
-            }).then(function(response) {
-                // DBG
-                // console.log(response.headers.get('Content-Type')); // application/json; charset=utf-8
-                // console.log(response.status); // 200
-                return response.json();
-            })
-            .then(function(respondData) {
-                if (respondData.status === "OK") {
-                    location.href = respondData.url;
+<script>
+    Vue.component('fractions', {
+        props: ['fraction', 'quantity', 'index'],
+        template:
+            `<div class="d-flex flex-row fraction">
+                <div>
+                    <input v-model.number="fraction.dividend" type="number" min="1" max="99" step="1" v-on:input="validate" />
+                    <div class="fraction__divider"></div>
+                    <input v-model.number="fraction.divider" type="number" min="1" max="99" step="1" v-on:input="validate" />
+                    <div v-if="quantity > 2">
+                        <input type="button" value="del" class="btn-delete" v-on:click="$emit('delete-fraction', index)" />
+                    </div>
+                </div>
+            </div>`,
+        methods: {
+            validate(evt) {
+                if (!evt.target.value) {
+                    alert('Введите значение от 1 до 99');
                 } else {
-                    for (let key in respondData.errors) {
-                        if (respondData.errors.hasOwnProperty(key)) {
-                            self.setState({ [`${key}_error`]: respondData.errors[key].join(', ') });
-                        }
+                    if (!evt.target.validity.valid) {
+                        alert(evt.target.validationMessage);
                     }
                 }
-            })
-            .catch(function(ex) {
-                console.log('Exception!', ex)
-            });
-        }
+            }
+        },
+    });
 
-        render() {
-            return (
-                <form onSubmit={this.handleSubmit}>
-                    <div className="form-group">
-                        <label htmlFor="email">Email*</label>
-                        <input className="form-control" name="email" id="email" type="text" value={this.state.email} onChange={this.handleChange} />
-                        <div className="error">{this.state.email_error}</div>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="cell_phone">Cell phone*</label>
-                        <input className="form-control" name="cell_phone" id="cell_phone" type="text" value={this.state.cell_phone} onChange={this.handleChange} placeholder="+7-XXX-XXX-XXXX" />
-                        <div className="error">{this.state.cell_phone_error}</div>
-                    </div>
-                    <div className={`form-group ${this.state.checkbox_1_hide ? 'hidden' : ''}`}>
-                        <label htmlFor="checkbox_1">Checkbox 1*</label>
-                        <input className="form-control" name="checkbox_1" id="checkbox_1" type="checkbox" defaultChecked={this.state.checkbox_1} onChange={this.handleChangeCheckbox} />
-                        <div className="error">{this.state.checkbox_1_error}</div>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="checkbox_2">Checkbox 2</label>
-                        <input className="form-control" name="checkbox_2" id="checkbox_2" type="checkbox" defaultChecked={this.state.checkbox_2} onChange={this.handleChangeCheckbox} />
-                    </div>
-                    <input type="submit" className="btn btn-primary" value="Submit" />
-                </form>
-            );
-        }
-    };
-
-    ReactDOM.render(
-        <Form />,
-        document.getElementById('container')
-    );
+    new Vue({
+        el: '#container',
+        data: {
+            fractions_list: [
+                {dividend: 1, divider: 2},
+                {dividend: 1, divider: 2}
+            ],
+        },
+        computed: {
+            division_result: function() {
+                let result = 0;
+                this.fractions_list.map((item, index) => {
+                    result += item.dividend / item.divider;
+                });
+                return result;
+            },
+        },
+        methods: {
+            add() {
+                if (this.fractions_list.length < 5) {
+                    this.fractions_list.push({dividend: 1, divider: 2})
+                }
+            },
+            deleteFraction(index) {
+                this.fractions_list.splice(index, 1);
+            },
+        },
+    })
 </script>
 </body>
 </html>
